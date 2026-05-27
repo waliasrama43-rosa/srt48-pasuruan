@@ -1,23 +1,23 @@
-const supabase = require('../config/database');
+const { supabase } = require('../config/database');
 
 /**
- * Santri Model - For Multi-Tenant Student Management
- * 
- * This model manages santri/student data across tenants.
- * Each santri is associated with a specific tenant via tenant_id.
+ * Siswa Model - For Multi-Tenant Student Management
+ *
+ * This model manages siswa/student data across tenants.
+ * Each siswa is associated with a specific tenant via tenant_id.
  */
-class Santri {
+class Siswa {
   constructor() {}
 
   /**
-   * Get all santri for a specific tenant
+   * Get all siswa for a specific tenant
    * @param {string} tenantId - Tenant UUID
-   * @returns {Promise<Object>} List of santri
+   * @returns {Promise<Object>} List of siswa
    */
   async getByTenant(tenantId) {
     try {
       const { data, error } = await supabase
-        .from('santri')
+        .from('siswa')
         .select('*')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
@@ -30,16 +30,16 @@ class Santri {
   }
 
   /**
-   * Get santri by ID
-   * @param {string} santriId - Santri UUID
-   * @returns {Promise<Object>} Single santri data
+   * Get siswa by ID
+   * @param {string} siswaId - Siswa UUID
+   * @returns {Promise<Object>} Single siswa data
    */
-  async getById(santriId) {
+  async getById(siswaId) {
     try {
       const { data, error } = await supabase
-        .from('santri')
+        .from('siswa')
         .select('*')
-        .eq('id', santriId)
+        .eq('id', siswaId)
         .single();
 
       if (error) throw error;
@@ -50,14 +50,14 @@ class Santri {
   }
 
   /**
-   * Get santri by NIS/NISN
+   * Get siswa by NIS/NISN
    * @param {string} nis - Student ID number (NIS/NISN)
-   * @returns {Promise<Object>} Single santri data
+   * @returns {Promise<Object>} Single siswa data
    */
   async getByNIS(nis) {
     try {
       const { data, error } = await supabase
-        .from('santri')
+        .from('siswa')
         .select('*')
         .eq('nis', nis)
         .single();
@@ -70,14 +70,14 @@ class Santri {
   }
 
   /**
-   * Get santri by registration number
+   * Get siswa by registration number
    * @param {string} noPendaftaran - Registration number
-   * @returns {Promise<Object>} Single santri data
+   * @returns {Promise<Object>} Single siswa data
    */
   async getByNoPendaftaran(noPendaftaran) {
     try {
       const { data, error } = await supabase
-        .from('santri')
+        .from('siswa')
         .select('*')
         .eq('no_pendaftaran', noPendaftaran)
         .single();
@@ -90,15 +90,15 @@ class Santri {
   }
 
   /**
-   * Create new santri
-   * @param {Object} santriData - Santri information
-   * @returns {Promise<Object>} Created santri data
+   * Create new siswa
+   * @param {Object} siswaData - Siswa information
+   * @returns {Promise<Object>} Created siswa data
    */
-  async create(santriData) {
+  async create(siswaData) {
     try {
       const { data, error } = await supabase
-        .from('santri')
-        .insert([santriData])
+        .from('siswa')
+        .insert([siswaData])
         .select()
         .single();
 
@@ -110,17 +110,17 @@ class Santri {
   }
 
   /**
-   * Update santri by ID
-   * @param {string} santriId - Santri UUID
-   * @param {Object} santriData - Updated santri information
-   * @returns {Promise<Object>} Updated santri data
+   * Update siswa by ID
+   * @param {string} siswaId - Siswa UUID
+   * @param {Object} siswaData - Updated siswa information
+   * @returns {Promise<Object>} Updated siswa data
    */
-  async update(santriId, santriData) {
+  async update(siswaId, siswaData) {
     try {
       const { data, error } = await supabase
-        .from('santri')
-        .update(santriData)
-        .eq('id', santriId)
+        .from('siswa')
+        .update(siswaData)
+        .eq('id', siswaId)
         .select()
         .single();
 
@@ -132,16 +132,16 @@ class Santri {
   }
 
   /**
-   * Delete santri by ID (soft delete)
-   * @param {string} santriId - Santri UUID
+   * Delete siswa by ID (soft delete)
+   * @param {string} siswaId - Siswa UUID
    * @returns {Promise<Object>} Deletion status
    */
-  async delete(santriId) {
+  async delete(siswaId) {
     try {
       const { error } = await supabase
-        .from('santri')
+        .from('siswa')
         .update({ is_active: false, deleted_at: new Date() })
-        .eq('id', santriId);
+        .eq('id', siswaId);
 
       if (error) throw error;
       return { success: true };
@@ -151,16 +151,16 @@ class Santri {
   }
 
   /**
-   * Activate santri
-   * @param {string} santriId - Santri UUID
+   * Activate siswa
+   * @param {string} siswaId - Siswa UUID
    * @returns {Promise<Object>} Activation status
    */
-  async activate(santriId) {
+  async activate(siswaId) {
     try {
       const { error } = await supabase
-        .from('santri')
+        .from('siswa')
         .update({ is_active: true, deleted_at: null })
-        .eq('id', santriId);
+        .eq('id', siswaId);
 
       if (error) throw error;
       return { success: true };
@@ -170,15 +170,15 @@ class Santri {
   }
 
   /**
-   * Get santri by asrama (dormitory)
+   * Get siswa by asrama (dormitory)
    * @param {string} tenantId - Tenant UUID
    * @param {string} asramaId - Asrama UUID
-   * @returns {Promise<Object>} List of santri in specific asrama
+   * @returns {Promise<Object>} List of siswa in specific asrama
    */
   async getByAsrama(tenantId, asramaId) {
     try {
       const { data, error } = await supabase
-        .from('santri')
+        .from('siswa')
         .select('*')
         .eq('tenant_id', tenantId)
         .eq('asrama_id', asramaId)
@@ -193,14 +193,14 @@ class Santri {
   }
 
   /**
-   * Count total santri within a tenant
+   * Count total siswa within a tenant
    * @param {string} tenantId - Tenant UUID
-   * @returns {Promise<Object>} Santri count
+   * @returns {Promise<Object>} Siswa count
    */
   async count(tenantId) {
     try {
       const { count, error } = await supabase
-        .from('santri')
+        .from('siswa')
         .select('id', { count: 'exact' })
         .eq('tenant_id', tenantId)
         .eq('is_active', true);
@@ -213,15 +213,15 @@ class Santri {
   }
 
   /**
-   * Search santri by name (fuzzy search)
+   * Search siswa by name (fuzzy search)
    * @param {string} tenantId - Tenant UUID
    * @param {string} nama - Name to search
-   * @returns {Promise<Object>} List of matching santri
+   * @returns {Promise<Object>} List of matching siswa
    */
   async searchByName(tenantId, nama) {
     try {
       const { data, error } = await supabase
-        .from('santri')
+        .from('siswa')
         .select('*')
         .eq('tenant_id', tenantId)
         .ilike('nama', `%${nama}%`)
@@ -235,4 +235,4 @@ class Santri {
   }
 }
 
-module.exports = new Santri();
+module.exports = new Siswa();

@@ -71,39 +71,35 @@ srt48-pasuruan/
 
 ---
 
-## Completed Today (2026-05-27)
+## Completed (Sesi 1 & 2)
 
-✅ **DONE:** Created `.kiro/steering/SaaS_Rules.md` - Steering file for multi-tenant development  
-✅ **DONE:** Created `backend/src/models/tenant.js` - Tenant model with CRUD operations  
-✅ **DONE:** Created `backend/src/models/user.js` - User model with tenant_id field  
-✅ **DONE:** Created `backend/src/models/santri.js` - Santri model with tenant_id field  
-✅ **DONE:** Updated `backend/src/config/database.js` - Added tenant context helper functions  
-✅ **DONE:** Created `backend/migration_tenant.sql` - Initial migration script (needs fix)
+✅ Created `.kiro/steering/SaaS_Rules.md` - Steering file for multi-tenant development  
+✅ Created `backend/src/models/tenant.js` - Tenant model with CRUD operations  
+✅ Created `backend/src/models/user.js` - User model with tenant_id field  
+✅ Renamed `santri.js` → `siswa.js` - Universal naming for SaaS product  
+✅ Updated `backend/src/config/database.js` - Tenant context helpers (setTenantContext, withTenantFilter)  
+✅ Fixed `backend/migration_tenant.sql` v3 - Hybrid CREATE+ALTER, ran successfully in Supabase  
+✅ Updated `backend/src/routes/absensi.js` - Added setTenantContext middleware  
+✅ Rewrote `backend/src/controllers/absensiController.js` - Full multi-tenant aware (withTenantFilter on all queries)
 
 ---
 
 ## Pending Tasks
 
-### Phase 1: Multi-Tenancy Foundation ⚠️ CRITICAL - PRIORITY #1 TOMORROW
+### Phase 1: Multi-Tenancy Foundation
 
-**Issue:** Migration script fails because existing tables don't have `tenant_id` column
+1. [✅ SELESAI] **TASK-A1:** Database Migration - Hybrid script berhasil di Supabase
+2. [✅ SELESAI] **TASK-A1b:** Rename santri → siswa (universal SaaS naming)
+3. [✅ SELESAI] **TASK-Absensi:** Routes & Controller absensi — multi-tenant aware
 
-**Tasks:**
-1. [🔴 HIGH PRIORITY] **TASK-A1:** Fix Database Migration Script
-   - [ ] Update `migration_tenant.sql` with ALTER TABLE approach for existing tables
-   - [ ] Test migration on Supabase with existing schema
-   - [ ] Verify RLS policies work after column addition
-   - [ ] Document successful migration steps
-   
-2. [ ] **TASK-A2:** Middleware Development
-   - [ ] Create `tenantValidation` middleware to extract and validate tenant context
-   - [ ] Update all existing queries to include `tenant_id` filter
-   - [ ] Implement automatic tenant identification from JWT or request context
+4. [🔴 NEXT] **TASK-A2:** Middleware Development
+   - [ ] Update `auth.js` — tambah `tenant_id` ke JWT payload saat login
+   - [ ] Test end-to-end: login → setTenantContext → query absensi dengan filter tenant
 
-3. [ ] **TASK-A3:** Multi-tenant Authentication Flow
-   - [ ] Add `tenant_id` to JWT payload
-   - [ ] Update login/logout endpoints to include tenant context
-   - [ ] Create tenant onboarding flow for new schools/pondok
+5. [ ] **TASK-A3:** Buat tabel SQL pendukung absensi di Supabase
+   - [ ] Tabel `activities` (dengan kolom `tenant_id`)
+   - [ ] Tabel `activity_sessions` (dengan kolom `tenant_id`)
+   - [ ] Tabel `attendances` (dengan kolom `tenant_id` dan `siswa_id`)
 
 ---
 
@@ -159,14 +155,13 @@ srt48-pasuruan/
 ## Tomorrow's Focus (Next Session Priority)
 
 **MUST DO FIRST:**
-1. Fix `migration_tenant.sql` to handle existing tables with ALTER TABLE
-2. Successfully run migration in Supabase
-3. Verify data isolation with test queries
+1. Tambah `tenant_id` ke JWT payload di `authController.js` (login)
+2. Buat tabel SQL: `activities`, `activity_sessions`, `attendances` (dengan `tenant_id`)
+3. Test end-to-end absensi API dengan Postman / REST client
 
 **THEN PROCEED TO:**
-- Update existing controllers to use tenant_id filtering
-- Test authentication with tenant context
-- Begin API development for Absensi module
+- Update controller lain (nilai, asrama, dll) dengan pola yang sama
+- Tambah validasi role untuk endpoint absensi
 
 ---
 

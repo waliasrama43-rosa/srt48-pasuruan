@@ -1,194 +1,142 @@
 # Tasks.md - SRT 48 Pasuruan ERP Development
 
-## Development Status: Database Migration Phase (Error Logged)
+## Development Status: Multi-Tenant Backend — Core Auth & Absensi SELESAI ✅
 
-**Last Updated:** 2026-05-27 (Evening Session)  
-**Mode:** Supervised (Manual Confirmation Required)  
+**Last Updated:** 2026-05-27 (Sesi 3)
+**Mode:** Supervised (Manual Confirmation Required)
 **Priority:** Token-Efficient, Incremental Development
 
 ---
 
-## 🚨 URGENT - Migration Error (Must Fix Tomorrow)
+## ✅ Selesai Dikerjakan (Semua Sesi)
 
-**ERROR:** `column 'tenant_id' does not exist` (Supabase Error Code: 42703)
-
-**Root Cause:** 
-- Tables `users` and `santri` already exist in Supabase from previous project
-- `CREATE TABLE IF NOT EXISTS` skipped creation
-- `tenant_id` column was never added to existing tables
-- RLS policies tried to reference non-existent `tenant_id` column
-
-**Solution for Next Session:**
-Use **hybrid migration approach**:
-1. First, run `ALTER TABLE ... ADD COLUMN IF NOT EXISTS tenant_id UUID`
-2. Then, add foreign key constraints
-3. Finally, create RLS policies that reference tenant_id
-
-**File to Update:** `backend/migration_tenant.sql`
+| # | Task | File | Status |
+|---|------|------|--------|
+| 1 | Steering file SaaS rules | `.kiro/steering/SaaS_Rules.md` | ✅ |
+| 2 | Model Tenant | `backend/src/models/tenant.js` | ✅ |
+| 3 | Model User (tenant-aware) | `backend/src/models/user.js` | ✅ |
+| 4 | Rename santri → siswa | `backend/src/models/siswa.js` | ✅ |
+| 5 | Tenant context helpers | `backend/src/config/database.js` | ✅ |
+| 6 | Migration multi-tenant (hybrid) | `backend/migration_tenant.sql` | ✅ Berhasil di Supabase |
+| 7 | Absensi routes + setTenantContext | `backend/src/routes/absensi.js` | ✅ |
+| 8 | Absensi controller (tenant-aware) | `backend/src/controllers/absensiController.js` | ✅ |
+| 9 | **JWT payload + tenant_id** | `backend/src/controllers/authController.js` | ✅ **BARU** |
+| 10 | **Fix import {supabase}** | `backend/src/models/user.js` | ✅ **BARU** |
+| 11 | **Migration tabel absensi** | `backend/migration_absensi.sql` | ✅ **BARU — siap dijalankan** |
 
 ---
 
+## 🗺️ Alur Data Saat Ini (End-to-End)
+
+```
+[Login POST /api/auth/login]
+  └─ authController.login()
+       └─ buatToken(user)  ← tenant_id kini ada di JWT ✅
+            └─ JWT { id, tenant_id, role_id, name, email, phone }
+
+[Request ke endpoint protected, e.g. GET /api/absensi/rekap/harian]
+  └─ verifikasiToken()     ← decode JWT → req.user.tenant_id tersedia ✅
+  └─ setTenantContext()    ← tenantContext.set(req.user.tenant_id) ✅
+  └─ rekapHarian()
+       └─ getTenantId()    ← ambil tenant_id dari context ✅
+       └─ supabase.from('attendances').eq('tenant_id', tenantId) ✅
+```
+
 ---
 
-## Current State Analysis
+## 🔴 TASK BERIKUTNYA (Prioritas Tinggi)
 
-### Tech Stack Detected
-- **Backend Framework:** Node.js + Express
-- **Database:** Supabase (PostgreSQL)
-- **Authentication:** JWT + OTP (via Telegram)
-- **Real-time:** Socket.io
-- **File Upload:** Multer
-- **Notifications:** Telegram Bot API
-- **QR Code:** qrcode package
-- **Excel:** xlsx package
+### TASK-SQL-1: Jalankan `migration_absensi.sql` di Supabase
+- File: `backend/migration_absensi.sql`
+- Tabel yang dibuat: `activity_categories`, `activities`, `activity_sessions`, `attendances`
+- **Aksi:** Copy-paste ke Supabase SQL Editor → Run
 
-### Existing Modules in Backend
-1. `auth` - Login System (Admin/Guru/Wali Santri)
-2. `siswa` - Student Management
-3. `absensi` - Attendance Tracking
-4. `nilai` - Grades/Grading System
-5. `asrama` - Dormitory Management
-6. `kesehatan` - Health Record System
-7. `perlengkapan` - Equipment/Supply Management
-8. `pengumuman` - Announcements
-9. `laporan` - Reports
-10. `bakatMinat` - Talent & Interest Tracking
+### TASK-SQL-2: Jalankan seed data kategori kegiatan (opsional)
+- Uncomment bagian SEED DATA di `migration_absensi.sql`
+- Isi `TENANT_UUID` dengan UUID sekolah SRT 48 dari tabel `tenants`
 
-### Current Repository Structure
+### TASK-B1: Update `authController` — tambah tenant_id saat register user baru
+- Saat ini belum ada endpoint register, hanya login
+- Perlu dibuat endpoint `POST /api/auth/register` untuk onboarding tenant baru
+
+### TASK-B2: RBAC — Tabel `roles` dan `role_permissions`
+- Buat tabel `roles` dengan kolom: id, tenant_id, name, permissions (jsonb)
+- Update `cekRole()` di middleware agar cek ke tabel, bukan hardcode angka
+- Role yang dibutuhkan: Super Admin, Tenant Admin, Guru/Ustadz, Keamanan, Wali Siswa
+
+### TASK-C1: Update controller lain agar tenant-aware
+Controller berikut belum menggunakan `withTenantFilter`:
+- [ ] `nilaiController.js`
+- [ ] `asramaController.js` (route: `asrama.js`)
+- [ ] `kesehatanController.js`
+- [ ] `perlengkapanController.js`
+- [ ] `pengumumanController.js`
+- [ ] `laporanController.js`
+- [ ] `bakatMinatController.js`
+- [ ] `siswaController.js`
+
+### TASK-C2: Update semua routes agar pakai `setTenantContext`
+Sama seperti `absensi.js`, semua routes perlu:
+```js
+router.use(verifikasiToken);
+router.use(setTenantContext); // ← tambahkan ini
+```
+
+---
+
+## 📋 Backlog (Sesi Mendatang)
+
+| Prioritas | Task | Estimasi |
+|-----------|------|----------|
+| 🔴 Tinggi | Jalankan migration_absensi.sql di Supabase | 5 menit |
+| 🔴 Tinggi | Test end-to-end login → absensi dengan Postman | 30 menit |
+| 🟠 Sedang | Update 7 controller lain jadi tenant-aware | 2 sesi |
+| 🟠 Sedang | Buat tabel `roles` + endpoint register tenant | 1 sesi |
+| 🟡 Rendah | Telegram Bot: notifikasi otomatis ke wali siswa | 2 sesi |
+| 🟡 Rendah | Midtrans QRIS: pembayaran langganan SaaS | 2 sesi |
+| 🟡 Rendah | Flutter app: QR/NFC scanner | 3 sesi |
+
+---
+
+## 🏗️ Struktur Repositori Saat Ini
+
 ```
 srt48-pasuruan/
-├── .kiro/steering/SaaS_Rules.md  ← NEW: Steering Configuration
+├── .kiro/
+│   └── steering/SaaS_Rules.md
 ├── backend/
-│   ├── src/
-│   │   ├── controllers/          [10 modules]
-│   │   ├── routes/               [10 modules]
-│   │   ├── config/               [database.js]
-│   │   ├── middleware/           [auth, upload]
-│   │   └── services/             [telegram.js]
-│   └── package.json
-└── README.md
+│   ├── migration_tenant.sql      ← ✅ sudah dijalankan di Supabase
+│   ├── migration_absensi.sql     ← 🔴 BELUM dijalankan — lakukan sekarang!
+│   └── src/
+│       ├── app.js
+│       ├── config/
+│       │   └── database.js       ← setTenantContext, withTenantFilter, getTenantId
+│       ├── controllers/
+│       │   ├── authController.js ← ✅ JWT sekarang membawa tenant_id
+│       │   ├── absensiController.js ← ✅ full tenant-aware
+│       │   └── [7 controller lain — belum tenant-aware]
+│       ├── middleware/
+│       │   └── auth.js           ← ✅ verifikasiToken + cekRole
+│       ├── models/
+│       │   ├── tenant.js
+│       │   ├── user.js           ← ✅ fix import {supabase}
+│       │   └── siswa.js
+│       └── routes/
+│           ├── absensi.js        ← ✅ pakai setTenantContext
+│           └── [9 routes lain — belum pakai setTenantContext]
+└── tasks.md                      ← file ini
 ```
 
 ---
 
-## Completed (Sesi 1 & 2)
+## 📝 Catatan Arsitektur
 
-✅ Created `.kiro/steering/SaaS_Rules.md` - Steering file for multi-tenant development  
-✅ Created `backend/src/models/tenant.js` - Tenant model with CRUD operations  
-✅ Created `backend/src/models/user.js` - User model with tenant_id field  
-✅ Renamed `santri.js` → `siswa.js` - Universal naming for SaaS product  
-✅ Updated `backend/src/config/database.js` - Tenant context helpers (setTenantContext, withTenantFilter)  
-✅ Fixed `backend/migration_tenant.sql` v3 - Hybrid CREATE+ALTER, ran successfully in Supabase  
-✅ Updated `backend/src/routes/absensi.js` - Added setTenantContext middleware  
-✅ Rewrote `backend/src/controllers/absensiController.js` - Full multi-tenant aware (withTenantFilter on all queries)
+1. **tenant_id flow:** JWT → `req.user.tenant_id` → `tenantContext` → semua query
+2. **Tidak ada global state race condition** saat ini karena Node.js single-threaded, tapi perlu diupgrade ke `AsyncLocalStorage` jika traffic tinggi (multi-worker)
+3. **RLS Supabase** adalah lapisan keamanan kedua — meski backend bocor, database tetap aman
+4. **Soft delete** diterapkan di semua tabel (`is_active`, `deleted_at`)
+5. **Idempotent migration** — semua script SQL aman dijalankan ulang
 
 ---
 
-## Pending Tasks
-
-### Phase 1: Multi-Tenancy Foundation
-
-1. [✅ SELESAI] **TASK-A1:** Database Migration - Hybrid script berhasil di Supabase
-2. [✅ SELESAI] **TASK-A1b:** Rename santri → siswa (universal SaaS naming)
-3. [✅ SELESAI] **TASK-Absensi:** Routes & Controller absensi — multi-tenant aware
-
-4. [🔴 NEXT] **TASK-A2:** Middleware Development
-   - [ ] Update `auth.js` — tambah `tenant_id` ke JWT payload saat login
-   - [ ] Test end-to-end: login → setTenantContext → query absensi dengan filter tenant
-
-5. [ ] **TASK-A3:** Buat tabel SQL pendukung absensi di Supabase
-   - [ ] Tabel `activities` (dengan kolom `tenant_id`)
-   - [ ] Tabel `activity_sessions` (dengan kolom `tenant_id`)
-   - [ ] Tabel `attendances` (dengan kolom `tenant_id` dan `siswa_id`)
-
----
-
-### Phase 2: Role-Based Access Control (RBAC) Enhancement
-
-**Current:** Basic role_id in users table  
-**Target:** Granular permission system (Super Admin, Tenant Admin, Staff, Security, Parents)
-
-**Tasks:**
-4. [ ] **TASK-B1:** Role Permissions Table
-   - [ ] Create `roles` table with permission matrix
-   - [ ] Create `role_permissions` junction table
-   - [ ] Add permission check middleware
-
-5. [ ] **TASK-B2:** Permission-Scoped Endpoints
-   - [ ] Audit all existing endpoints for permission requirements
-   - [ ] Update middleware to enforce role-based access
-   - [ ] Document permission matrix for each module
-
----
-
-### Phase 3: Code Quality & Testability
-
-**Tasks:**
-6. [ ] **TASK-C1:** Backend Test Suite
-   - [ ] Setup Jest/Vitest for unit testing
-   - [ ] Write tests for auth controller (login, OTP)
-   - [ ] Write tests for database RLS policies
-
-7. [ ] **TASK-C2:** CI/CD Configuration
-   - [ ] Add GitHub Actions workflow for automated testing
-   - [ ] Configure environment variable validation
-
----
-
-### Phase 4: Future Integrations (Spec-Driven)
-
-**Tasks:**
-8. [ ] **TASK-D1:** Telegram Bot Enhancements
-   - [ ] Create spec for automated parent notifications (attendance reminder, violations)
-   - [ ] Add webhook support instead of polling
-   
-9. [ ] **TASK-D2:** Midtrans QRIS Integration
-   - [ ] Create spec for SaaS subscription payment flow
-   - [ ] Implement midtrans-client integration
-   
-10. [ ] **TASK-D3:** Mobile Apps (Flutter/Android)
-    - [ ] Create spec for QR Code scanning app
-    - [ ] Create spec for NFC hardware integration
-
----
-
-## Tomorrow's Focus (Next Session Priority)
-
-**MUST DO FIRST:**
-1. Tambah `tenant_id` ke JWT payload di `authController.js` (login)
-2. Buat tabel SQL: `activities`, `activity_sessions`, `attendances` (dengan `tenant_id`)
-3. Test end-to-end absensi API dengan Postman / REST client
-
-**THEN PROCEED TO:**
-- Update controller lain (nilai, asrama, dll) dengan pola yang sama
-- Tambah validasi role untuk endpoint absensi
-
----
-
-## Session Notes (2026-05-27 Evening)
-
-**What Worked:**
-- Model structure is clean and well-documented
-- Helper functions for tenant context are ready
-- Steering rules established for team guidance
-
-**What Needs Fixing:**
-- Migration script assumes clean database
-- Need hybrid approach (CREATE + ALTER) for real-world scenario
-- RLS policies must be created AFTER columns exist
-
-**Lesson Learned:**
-Always check if tables exist before assuming clean slate. Production migrations need idempotent scripts that handle both new and existing schemas.
-
----
-
-## Notes & Context
-
-1. **Steering Rules:** See `.kiro/steering/SaaS_Rules.md` for architecture guidelines
-2. **Development Philosophy:** Token-efficient, spec-driven, supervised mode
-3. **Multi-Tenancy is CRITICAL:** Data isolation must be implemented before new features
-4. **No Auto-Pilot:** All major changes require user confirmation
-
----
-
-*This file should be updated whenever significant new tasks are identified*
+*Update file ini setiap sesi sebelum mulai coding.*

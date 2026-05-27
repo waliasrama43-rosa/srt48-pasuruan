@@ -1,4 +1,4 @@
-const supabase = require('../config/database');
+const { supabase } = require('../config/database');
 
 /**
  * User Model - For Multi-Tenant User Management

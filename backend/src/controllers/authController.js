@@ -1,16 +1,18 @@
-const supabase = require('../config/database');
+const { supabase } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// Buat token JWT
+// Buat token JWT — tenant_id wajib ada agar setTenantContext berfungsi
 const buatToken = (user) => {
   return jwt.sign(
     {
-      id: user.id,
-      role_id: user.role_id,
-      name: user.name,
-      email: user.email
+      id:        user.id,
+      tenant_id: user.tenant_id,   // ← CRITICAL: multi-tenant isolation
+      role_id:   user.role_id,
+      name:      user.name,
+      email:     user.email,
+      phone:     user.phone
     },
     process.env.JWT_SECRET,
     { expiresIn: '12h' }
@@ -66,11 +68,12 @@ exports.login = async (req, res) => {
       pesan: `Selamat datang, ${user.name}!`,
       token,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role_id: user.role_id,
-        photo: user.photo
+        id:        user.id,
+        tenant_id: user.tenant_id,
+        name:      user.name,
+        email:     user.email,
+        role_id:   user.role_id,
+        photo:     user.photo
       }
     });
 
@@ -190,11 +193,12 @@ exports.verifikasiOTP = async (req, res) => {
       pesan: `Selamat datang, ${user.name}!`,
       token,
       user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        role_id: user.role_id,
-        photo: user.photo
+        id:        user.id,
+        tenant_id: user.tenant_id,
+        name:      user.name,
+        phone:     user.phone,
+        role_id:   user.role_id,
+        photo:     user.photo
       }
     });
 
@@ -211,7 +215,7 @@ exports.profilSaya = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, name, email, phone, role_id, photo, last_login')
+      .select('id, name, email, phone, role_id, tenant_id, photo, last_login')
       .eq('id', req.user.id)
       .single();
 

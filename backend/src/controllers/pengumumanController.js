@@ -1,10 +1,12 @@
-const supabase = require('../config/database');
+const { supabase, getTenantId } = require('../config/database');
 
 exports.semuaPengumuman = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('announcements')
       .select('*, users(name)')
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
@@ -23,9 +25,11 @@ exports.tambahPengumuman = async (req, res) => {
   try {
     const { title, content, target } = req.body;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('announcements')
       .insert({
+        tenant_id: tenantId,
         title, content,
         target: target || 'semua',
         created_by: req.user.id,
@@ -54,13 +58,12 @@ exports.editPengumuman = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('announcements')
-      .update({
-        ...req.body,
-        updated_at: new Date()
-      })
+      .update({ ...req.body, updated_at: new Date() })
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .select()
       .single();
 
@@ -84,13 +87,12 @@ exports.hapusPengumuman = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('announcements')
-      .update({
-        is_active: false,
-        updated_at: new Date()
-      })
+      .update({ is_active: false, updated_at: new Date() })
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .select()
       .single();
 
@@ -114,9 +116,11 @@ exports.kirimBroadcast = async (req, res) => {
   try {
     const { title, content, target } = req.body;
 
+    const tenantId = getTenantId();
     const { data: pengumuman, error } = await supabase
       .from('announcements')
       .insert({
+        tenant_id: tenantId,
         title, content,
         target: target || 'semua',
         created_by: req.user.id,
@@ -131,6 +135,7 @@ exports.kirimBroadcast = async (req, res) => {
     const { data: orangTua } = await supabase
       .from('users')
       .select('telegram_chat_id, name')
+      .eq('tenant_id', tenantId)
       .eq('role_id', 10)
       .eq('is_active', true)
       .not('telegram_chat_id', 'is', null);

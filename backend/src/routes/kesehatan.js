@@ -9,8 +9,10 @@ const {
   updateKunjungan
 } = require('../controllers/kesehatanController');
 const { verifikasiToken, cekRole } = require('../middleware/auth');
+const { setTenantContext } = require('../config/database');
 
 router.use(verifikasiToken);
+router.use(setTenantContext);
 router.get('/siswa/:id', riwayatKesehatan);
 router.post('/siswa/:id', cekRole([1,2,8]), tambahCatatanKesehatan);
 router.put('/siswa/:id', cekRole([1,2,8]), editCatatanKesehatan);

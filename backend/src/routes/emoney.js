@@ -11,8 +11,10 @@ const {
   laporanSiswa
 } = require('../controllers/emoneyController');
 const { verifikasiToken, cekRole } = require('../middleware/auth');
+const { setTenantContext } = require('../config/database');
 
 router.use(verifikasiToken);
+router.use(setTenantContext);
 router.get('/saldo/:siswa_id', cekSaldo);
 router.get('/riwayat/:siswa_id', riwayatTransaksi);
 router.post('/bayar', cekRole([1,2,9]), bayar);

@@ -8,8 +8,10 @@ const {
   kirimBroadcast
 } = require('../controllers/pengumumanController');
 const { verifikasiToken, cekRole } = require('../middleware/auth');
+const { setTenantContext } = require('../config/database');
 
 router.use(verifikasiToken);
+router.use(setTenantContext);
 router.get('/', semuaPengumuman);
 router.post('/', cekRole([1,2,3,4]), tambahPengumuman);
 router.put('/:id', cekRole([1,2,3,4]), editPengumuman);

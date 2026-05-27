@@ -10,9 +10,11 @@ const {
   importNilai
 } = require('../controllers/nilaiController');
 const { verifikasiToken, cekRole } = require('../middleware/auth');
+const { setTenantContext } = require('../config/database');
 const upload = require('../middleware/upload');
 
 router.use(verifikasiToken);
+router.use(setTenantContext);
 router.get('/siswa/:id', nilaiSiswa);
 router.get('/rapor/:id', raporSiswa);
 router.get('/ranking/:kelas_id', rankingKelas);

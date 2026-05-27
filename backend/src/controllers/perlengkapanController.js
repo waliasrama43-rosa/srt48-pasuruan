@@ -1,11 +1,13 @@
-const supabase = require('../config/database');
+const { supabase, getTenantId } = require('../config/database');
 
 // Semua Barang
 exports.semuaBarang = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('items')
       .select('*')
+      .eq('tenant_id', tenantId)
       .order('name', { ascending: true });
 
     if (error) throw error;
@@ -21,9 +23,11 @@ exports.tambahBarang = async (req, res) => {
   try {
     const { name, code, category, unit, description } = req.body;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('items')
       .insert({
+        tenant_id: tenantId,
         name, code: code || null,
         category: category || null,
         unit: unit || 'pcs',
@@ -52,10 +56,12 @@ exports.editBarang = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('items')
       .update({ ...req.body, updated_at: new Date() })
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .select()
       .single();
 
@@ -77,9 +83,11 @@ exports.stokMasuk = async (req, res) => {
   try {
     const { item_id, jumlah, keterangan } = req.body;
 
+    const tenantId = getTenantId();
     const { data: stok, error: errorStok } = await supabase
       .from('item_stocks')
       .insert({
+        tenant_id: tenantId,
         item_id, type: 'masuk',
         jumlah, keterangan: keterangan || null,
         tanggal: new Date(),
@@ -119,10 +127,12 @@ exports.distribusiKesSiswa = async (req, res) => {
   try {
     const { student_id, item_id, jumlah, ukuran, keterangan } = req.body;
 
+    const tenantId = getTenantId();
     const { data: barang } = await supabase
       .from('items')
       .select('stock, name')
       .eq('id', item_id)
+      .eq('tenant_id', tenantId)
       .single();
 
     if (!barang || barang.stock < jumlah) {
@@ -135,6 +145,7 @@ exports.distribusiKesSiswa = async (req, res) => {
     const { data, error } = await supabase
       .from('item_distributions')
       .insert({
+        tenant_id: tenantId,
         student_id, item_id, jumlah,
         ukuran: ukuran || null,
         keterangan: keterangan || null,
@@ -175,10 +186,12 @@ exports.riwayatSiswa = async (req, res) => {
   try {
     const { siswa_id } = req.params;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('item_distributions')
       .select(`*, items(id, name, code, category, unit)`)
       .eq('student_id', siswa_id)
+      .eq('tenant_id', tenantId)
       .order('tanggal', { ascending: false });
 
     if (error) throw error;
@@ -192,13 +205,11 @@ exports.riwayatSiswa = async (req, res) => {
 // Laporan Distribusi
 exports.laporanDistribusi = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('item_distributions')
-      .select(`
-        *,
-        students (nis, users(name), classrooms(name)),
-        items (name, category, unit)
-      `)
+      .select(`*, students (nis, users(name), classrooms(name)), items (name, category, unit)`)
+      .eq('tenant_id', tenantId)
       .order('tanggal', { ascending: false });
 
     if (error) throw error;

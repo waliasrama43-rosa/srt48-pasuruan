@@ -1,17 +1,15 @@
-const supabase = require('../config/database');
+const { supabase, getTenantId } = require('../config/database');
 
 exports.semuaBakat = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { siswa_id } = req.params;
 
     const { data, error } = await supabase
       .from('student_talents')
-      .select(`
-        *,
-        talent_categories (name, icon),
-        users (name)
-      `)
+      .select(`*, talent_categories (name, icon), users (name)`)
       .eq('student_id', siswa_id)
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
@@ -33,9 +31,11 @@ exports.tambahBakat = async (req, res) => {
       talent_name, level, description
     } = req.body;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('student_talents')
       .insert({
+        tenant_id: tenantId,
         student_id, category_id,
         talent_name,
         level: level || 'Pemula',
@@ -275,12 +275,14 @@ exports.rekomendasiJurusan = async (req, res) => {
 
 exports.prestasiSiswa = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { siswa_id } = req.params;
 
     const { data, error } = await supabase
       .from('achievements')
       .select('*, users(name)')
       .eq('student_id', siswa_id)
+      .eq('tenant_id', tenantId)
       .order('event_date', { ascending: false });
 
     if (error) throw error;
@@ -307,9 +309,11 @@ exports.tambahPrestasi = async (req, res) => {
       event_date, organizer, notes
     } = req.body;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('achievements')
       .insert({
+        tenant_id: tenantId,
         student_id, title,
         category: category || 'Umum',
         level: level || 'Sekolah',
@@ -341,12 +345,14 @@ exports.tambahPrestasi = async (req, res) => {
 
 exports.konselingSiswa = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { siswa_id } = req.params;
 
     const { data, error } = await supabase
       .from('counseling_records')
       .select('*, users(name)')
       .eq('student_id', siswa_id)
+      .eq('tenant_id', tenantId)
       .order('session_date', { ascending: false });
 
     if (error) throw error;
@@ -372,9 +378,11 @@ exports.tambahKonseling = async (req, res) => {
       notes, follow_up, next_session
     } = req.body;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('counseling_records')
       .insert({
+        tenant_id: tenantId,
         student_id,
         counselor_id: req.user.id,
         topic, type: type || 'Umum',

@@ -11,9 +11,11 @@ const {
   downloadTemplate
 } = require('../controllers/siswaController');
 const { verifikasiToken, cekRole } = require('../middleware/auth');
+const { setTenantContext } = require('../config/database');
 const upload = require('../middleware/upload');
 
 router.use(verifikasiToken);
+router.use(setTenantContext);
 router.get('/', semuaSiswa);
 router.get('/scan/:kartu_id', scanKartu);
 router.get('/template', downloadTemplate);

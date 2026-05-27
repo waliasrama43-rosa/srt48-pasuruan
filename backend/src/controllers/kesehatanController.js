@@ -1,14 +1,16 @@
-const supabase = require('../config/database');
+const { supabase, getTenantId } = require('../config/database');
 
 // Riwayat Kesehatan Siswa
 exports.riwayatKesehatan = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { id } = req.params;
 
     const { data, error } = await supabase
       .from('health_records')
       .select(`*, users(name)`)
       .eq('student_id', id)
+      .eq('tenant_id', tenantId)
       .order('visit_date', { ascending: false });
 
     if (error) throw error;
@@ -29,9 +31,11 @@ exports.tambahCatatanKesehatan = async (req, res) => {
       is_referred, referred_to, notes
     } = req.body;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('health_records')
       .insert({
+        tenant_id: tenantId,
         student_id: id,
         keluhan, suhu_tubuh: suhu_tubuh || null,
         tindakan, obat_diberikan: obat_diberikan || null,
@@ -87,17 +91,13 @@ exports.editCatatanKesehatan = async (req, res) => {
 // Kunjungan UKS Hari Ini
 exports.kunjunganUKS = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { tanggal } = req.query;
-    const hariIni = tanggal ||
-      new Date().toISOString().split('T')[0];
-
+    const hariIni = tanggal || new Date().toISOString().split('T')[0];
     const { data, error } = await supabase
       .from('health_records')
-      .select(`
-        *,
-        students (nis, users(name), classrooms(name)),
-        users (name)
-      `)
+      .select(`*, students (nis, users(name), classrooms(name)), users (name)`)
+      .eq('tenant_id', tenantId)
       .eq('visit_date', hariIni)
       .order('created_at', { ascending: false });
 
@@ -124,9 +124,11 @@ exports.tambahKunjungan = async (req, res) => {
       need_rest, is_referred, referred_to
     } = req.body;
 
+    const tenantId = getTenantId();
     const { data, error } = await supabase
       .from('health_records')
       .insert({
+        tenant_id: tenantId,
         student_id, keluhan,
         suhu_tubuh: suhu_tubuh || null,
         tindakan,

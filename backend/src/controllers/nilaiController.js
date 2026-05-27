@@ -1,10 +1,10 @@
-const supabase = require('../config/database');
+const { supabase, getTenantId } = require('../config/database');
 const xlsx = require('xlsx');
 const fs = require('fs');
 
-// Nilai Siswa
 exports.nilaiSiswa = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { id } = req.params;
     const { semester, year } = req.query;
 
@@ -12,11 +12,12 @@ exports.nilaiSiswa = async (req, res) => {
       .from('grades')
       .select('*, subjects(name, code)')
       .eq('student_id', id)
+      .eq('tenant_id', tenantId)
       .eq('is_archived', false)
       .order('created_at', { ascending: false });
 
     if (semester) query = query.eq('semester', semester);
-    if (year) query = query.eq('year', year);
+    if (year)     query = query.eq('year', year);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -44,15 +45,10 @@ exports.nilaiSiswa = async (req, res) => {
   }
 };
 
-// Input Nilai
 exports.inputNilai = async (req, res) => {
   try {
-    const {
-      student_id, subject_id,
-      semester, year,
-      daily_score, mid_score,
-      final_score, catatan
-    } = req.body;
+    const tenantId = getTenantId();
+    const { student_id, subject_id, semester, year, daily_score, mid_score, final_score, catatan } = req.body;
 
     const finalGrade = Math.round(
       (daily_score * 0.3) +
@@ -72,6 +68,7 @@ exports.inputNilai = async (req, res) => {
       .eq('subject_id', subject_id)
       .eq('semester', semester)
       .eq('year', year)
+      .eq('tenant_id', tenantId)
       .single();
 
     let data, error;
@@ -93,6 +90,7 @@ exports.inputNilai = async (req, res) => {
       ({ data, error } = await supabase
         .from('grades')
         .insert({
+          tenant_id: tenantId,
           student_id, subject_id,
           semester, year,
           daily_score, mid_score,
@@ -197,26 +195,24 @@ exports.hapusNilai = async (req, res) => {
   }
 };
 
-// Rapor Siswa
 exports.raporSiswa = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { id } = req.params;
     const { semester, year } = req.query;
 
     const { data: siswa } = await supabase
-      .from('students')
-      .select(`
-        nis, nisn,
-        users (name),
-        classrooms (name)
-      `)
+      .from('siswa')
+      .select('nis, nisn, nama')
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .single();
 
     const { data: nilai } = await supabase
       .from('grades')
       .select('*, subjects(name, code)')
       .eq('student_id', id)
+      .eq('tenant_id', tenantId)
       .eq('semester', semester)
       .eq('year', year)
       .eq('is_archived', false)
@@ -255,17 +251,18 @@ exports.raporSiswa = async (req, res) => {
   }
 };
 
-// Ranking Kelas
 exports.rankingKelas = async (req, res) => {
   try {
+    const tenantId = getTenantId();
     const { kelas_id } = req.params;
     const { semester, year } = req.query;
 
     const { data: siswaKelas } = await supabase
-      .from('students')
-      .select('id, nis, users(name)')
-      .eq('classroom_id', kelas_id)
-      .eq('status', 'aktif');
+      .from('siswa')
+      .select('id, nis, nama')
+      .eq('asrama_id', kelas_id)
+      .eq('tenant_id', tenantId)
+      .eq('status_siswa', 'aktif');
 
     const ranking = [];
 
@@ -288,8 +285,8 @@ exports.rankingKelas = async (req, res) => {
 
       ranking.push({
         siswa_id: siswa.id,
-        nama: siswa.users?.name,
-        nis: siswa.nis,
+        nama:     siswa.nama,
+        nis:      siswa.nis,
         rata_rata: rataRata,
         jumlah_mapel: nilai?.length || 0
       });

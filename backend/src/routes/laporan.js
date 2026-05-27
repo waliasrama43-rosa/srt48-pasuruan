@@ -10,8 +10,10 @@ const {
   dashboardOrangTua
 } = require('../controllers/laporanController');
 const { verifikasiToken, cekRole } = require('../middleware/auth');
+const { setTenantContext } = require('../config/database');
 
 router.use(verifikasiToken);
+router.use(setTenantContext);
 router.get('/dashboard', dashboardAdmin);
 router.get('/absensi', laporanAbsensi);
 router.get('/nilai', laporanNilai);

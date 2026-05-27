@@ -14,8 +14,10 @@ const {
   rekomendasiJurusan
 } = require('../controllers/bakatMinatController');
 const { verifikasiToken, cekRole } = require('../middleware/auth');
+const { setTenantContext } = require('../config/database');
 
 router.use(verifikasiToken);
+router.use(setTenantContext);
 router.get('/bakat/:siswa_id', semuaBakat);
 router.post('/bakat', cekRole([1,2,3,4,5,6]), tambahBakat);
 router.put('/bakat/:id', cekRole([1,2,3,4,5,6]), editBakat);

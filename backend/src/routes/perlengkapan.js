@@ -10,8 +10,10 @@ const {
   laporanDistribusi
 } = require('../controllers/perlengkapanController');
 const { verifikasiToken, cekRole } = require('../middleware/auth');
+const { setTenantContext } = require('../config/database');
 
 router.use(verifikasiToken);
+router.use(setTenantContext);
 router.get('/', semuaBarang);
 router.post('/', cekRole([1,2,9]), tambahBarang);
 router.put('/:id', cekRole([1,2,9]), editBarang);

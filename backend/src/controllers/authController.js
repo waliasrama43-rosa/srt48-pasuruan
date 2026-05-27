@@ -45,9 +45,9 @@ exports.login = async (req, res) => {
       });
     }
 
-    const passwordValid = await bcrypt.compare(
-      password, user.password
-    );
+    // Cek kolom password: mendukung 'password' (lama) dan 'password_hash' (baru)
+    const storedHash = user.password_hash || user.password;
+    const passwordValid = await bcrypt.compare(password, storedHash);
 
     if (!passwordValid) {
       return res.status(401).json({
@@ -238,13 +238,12 @@ exports.gantiPassword = async (req, res) => {
 
     const { data: user } = await supabase
       .from('users')
-      .select('password')
+      .select('password, password_hash')
       .eq('id', req.user.id)
       .single();
 
-    const valid = await bcrypt.compare(
-      password_lama, user.password
-    );
+    const storedHash = user.password_hash || user.password;
+    const valid = await bcrypt.compare(password_lama, storedHash);
 
     if (!valid) {
       return res.status(400).json({
@@ -255,14 +254,136 @@ exports.gantiPassword = async (req, res) => {
 
     const hash = await bcrypt.hash(password_baru, 10);
 
+    // Update kedua kolom agar kompatibel dengan skema lama dan baru
     await supabase
       .from('users')
-      .update({ password: hash })
+      .update({ password: hash, password_hash: hash })
       .eq('id', req.user.id);
 
     res.json({
       status: 'ok',
       pesan: 'Password berhasil diubah'
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      pesan: err.message
+    });
+  }
+};
+
+// ─── Register Tenant + Admin Pertama ─────────────────────────────────────────
+// POST /api/auth/register
+// Body: { school_name, school_short_name, address, phone, email,
+//         admin_name, admin_email, admin_password, admin_phone }
+exports.registerTenant = async (req, res) => {
+  const {
+    school_name, school_short_name,
+    address, phone: school_phone, email: school_email,
+    admin_name, admin_email, admin_password, admin_phone
+  } = req.body;
+
+  // Validasi input wajib
+  if (!school_name || !school_short_name || !admin_name || !admin_email || !admin_password) {
+    return res.status(400).json({
+      status: 'error',
+      pesan: 'Kolom wajib: school_name, school_short_name, admin_name, admin_email, admin_password'
+    });
+  }
+
+  if (admin_password.length < 8) {
+    return res.status(400).json({
+      status: 'error',
+      pesan: 'Password admin minimal 8 karakter'
+    });
+  }
+
+  try {
+    // 1. Cek apakah email admin sudah dipakai
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', admin_email)
+      .single();
+
+    if (existingUser) {
+      return res.status(409).json({
+        status: 'error',
+        pesan: 'Email admin sudah terdaftar'
+      });
+    }
+
+    // 2. Cek apakah nama sekolah sudah dipakai
+    const { data: existingTenant } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('school_name', school_name)
+      .single();
+
+    if (existingTenant) {
+      return res.status(409).json({
+        status: 'error',
+        pesan: 'Nama sekolah sudah terdaftar'
+      });
+    }
+
+    // 3. Buat tenant baru
+    const { data: tenant, error: errTenant } = await supabase
+      .from('tenants')
+      .insert({
+        school_name,
+        school_short_name,
+        address:     address      || null,
+        phone:       school_phone || null,
+        email:       school_email || null,
+        subscription_status: 'trial',
+        is_active:   true
+      })
+      .select()
+      .single();
+
+    if (errTenant) throw errTenant;
+
+    // 4. Hash password dan buat akun admin
+    const hashedPassword = await bcrypt.hash(admin_password, 10);
+
+    const { data: adminUser, error: errUser } = await supabase
+      .from('users')
+      .insert({
+        tenant_id:     tenant.id,
+        name:          admin_name,
+        email:         admin_email,
+        phone:         admin_phone   || null,
+        password:      hashedPassword,
+        password_hash: hashedPassword,
+        role_id:       2,           // 2 = Tenant Admin
+        role_slug:     'tenant_admin',
+        is_active:     true
+      })
+      .select('id, name, email, role_id, tenant_id')
+      .single();
+
+    if (errUser) {
+      // Rollback: hapus tenant yang sudah dibuat
+      await supabase.from('tenants').delete().eq('id', tenant.id);
+      throw errUser;
+    }
+
+    // 5. Buat JWT untuk langsung login setelah register
+    const token = buatToken({ ...adminUser, phone: admin_phone });
+
+    res.status(201).json({
+      status: 'ok',
+      pesan: `Selamat datang, ${school_name}! Akun admin berhasil dibuat.`,
+      token,
+      tenant: {
+        id:                 tenant.id,
+        school_name:        tenant.school_name,
+        school_short_name:  tenant.school_short_name,
+        subscription_status: tenant.subscription_status
+      },
+      user: adminUser
     });
 
   } catch (err) {
